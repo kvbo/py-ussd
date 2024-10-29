@@ -28,7 +28,7 @@ class Radix:
         node.is_terminal = True
         node.handlers = func
         
-    def find(self, route, **kwargs):
+    def find(self, route, **kwargs) -> 'Radix':
         node = self
         tokens = [i for i in route.split('*') if i]
         for token in tokens:
@@ -41,8 +41,7 @@ class Radix:
                 else:
                     return None
             node = node.children[token] 
-        func = node.handlers    
-        return func
+        return node
     
     @staticmethod
     def run_validations(token, validators):
@@ -67,7 +66,9 @@ class Router:
             for routeK, v in router.tree.children.items():
                 self.tree.children[path].children[routeK] = v
         else:
-            self.tree.children[path] = router
+            self.tree.children[path] = router.tree
         
+        print(self.tree.children.keys())
     def get_handler(self, route, **kwargs):
-        return self.tree.find(route, **kwargs)
+        node = self.tree.find(route, **kwargs)
+        return node.handlers
