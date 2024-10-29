@@ -7,7 +7,7 @@ class Radix:
         self.value = None
         self.handlers: Callable | None = None
         self.alias = kwargs.get('alias', None)
-        self.validator = None
+        self.validators = []
     def insert(self, route, func):
         node = self
         tokens = [i for i in route.split('*') if i]
@@ -18,19 +18,16 @@ class Radix:
             if not node.children.get(token, False):
                 node.children[token] = Radix()
                 if token == "*":
-                    t = match.group(1).split()
+                    t = match.group(1).split(":")
                     key = t[0]
                     node.children[token].alias = key
                     if len(t) > 1:
-                        match t[1]:
-                            case "int":
-                                self.validator = int
-                            case "str":
-                                self.validator = str
+                        self.validators.append(t)
                             
             node = node.children[token]
         node.is_terminal = True
         node.handlers = func
+        
     def find(self, route, **kwargs):
         node = self
         tokens = [i for i in route.split('*') if i]
@@ -39,7 +36,7 @@ class Radix:
                 if '*' in node.children:
                     node = node.children["*"]
                     params = kwargs.get('params', {})
-                    params[node.alias] = self.validator(token) if self.validator else token
+                    params[node.alias] = self.run_validations(token, self.validators)
                     continue
                 else:
                     return None
@@ -47,20 +44,30 @@ class Radix:
         func = node.handlers    
         return func
     
+    @staticmethod
+    def run_validations(token, validators):
+        val = token
+        for validator in validators:
+            # val = validator(token)
+            ...
+        return val
+    
 class Router:
+    c = 0
     def __init__(self):
         self.tree = Radix()
-    def add_route(self, route: Callable):
+    def route(self, route: Callable):
         def wrapper(fn):
             def inner(*args, **kwargs):
                 self.tree.insert(route, fn)        
             inner()
         return wrapper
-    def include_router(self, router: "Router", path= ""):        
+    def attach_router(self, router: "Router", path= ""):     
         if path in self.tree.children:
-            raise IndexError("Path already exists")
-        for key, child in router.tree.children.items():
-            self.tree.children[key] = child
+            for routeK, v in router.tree.children.items():
+                self.tree.children[path].children[routeK] = v
+        else:
+            self.tree.children[path] = router
         
     def get_handler(self, route, **kwargs):
         return self.tree.find(route, **kwargs)
