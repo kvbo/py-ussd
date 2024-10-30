@@ -4,7 +4,11 @@ you can use it with your favourite backend framework.
 #### Under development
 ## Features
 1. ### Routing                  (DONE)
+    - Attach multiple routers defined in different files.
+    - **MINOR TODO** improve attachment of routes
 2. ### Validation               (ON GOING)
+    - Ability to add validators to user input.
+    - Allows the use of custom validators.
 3. ### Middleware               (TODO)
 4. ### Session Management       (TODO)
 

@@ -9,3 +9,6 @@ class USSDSessionTimeout(USSDError):
     
 class USSDValidationError(USSDError):
     ...
+    
+class USSDInternalError(USSDError):
+    ...

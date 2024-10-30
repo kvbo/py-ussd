@@ -1,13 +1,15 @@
 from typing import Callable, Dict
 import re
-class Radix:
+import time
+class Node:
     def __init__(self, **kwargs):
-        self.children: Dict[str, 'Radix'] = {}
+        self.children: Dict[str, 'Node'] = {}
         self.is_terminal = False
         self.value = None
-        self.handlers: Callable | None = None
-        self.alias = kwargs.get('alias', None)
+        self.handler: Callable | None = None
+        self.param = kwargs.get('param', None)
         self.validators = []
+        self.parent: 'Node'| None= None
     def insert(self, route, func):
         node = self
         tokens = [i for i in route.split('*') if i]
@@ -16,19 +18,20 @@ class Radix:
             if match:
                 token = '*' 
             if not node.children.get(token, False):
-                node.children[token] = Radix()
+                node.children[token] = Node()
                 if token == "*":
                     t = match.group(1).split(":")
                     key = t[0]
-                    node.children[token].alias = key
+                    node.children[token].param = key
                     if len(t) > 1:
-                        self.validators.append(t)
-                            
+                        node.children[token].validators.extend(t[1:])
+            
+            node.children[token].parent = node               
             node = node.children[token]
         node.is_terminal = True
-        node.handlers = func
+        node.handler = func
         
-    def find(self, route, **kwargs) -> 'Radix':
+    def find(self, route, **kwargs) -> 'Node':
         node = self
         tokens = [i for i in route.split('*') if i]
         for token in tokens:
@@ -36,25 +39,19 @@ class Radix:
                 if '*' in node.children:
                     node = node.children["*"]
                     params = kwargs.get('params', {})
-                    params[node.alias] = self.run_validations(token, self.validators)
+                    params[node.param] = token
                     continue
                 else:
                     return None
             node = node.children[token] 
+        
+        e = time.perf_counter_ns()
         return node
-    
-    @staticmethod
-    def run_validations(token, validators):
-        val = token
-        for validator in validators:
-            # val = validator(token)
-            ...
-        return val
     
 class Router:
     c = 0
     def __init__(self):
-        self.tree = Radix()
+        self.tree = Node()
     def route(self, route: Callable):
         def wrapper(fn):
             def inner(*args, **kwargs):
@@ -68,7 +65,6 @@ class Router:
         else:
             self.tree.children[path] = router.tree
         
-        print(self.tree.children.keys())
-    def get_handler(self, route, **kwargs):
+    def get_handler(self, route, **kwargs) -> Node:
         node = self.tree.find(route, **kwargs)
-        return node.handlers
+        return node
